@@ -1,5 +1,6 @@
 package com.example.layeredarchitecture.controller;
 
+import com.example.layeredarchitecture.dao.CustomerDAO;
 import com.example.layeredarchitecture.dao.CustomerDAOImpl;
 import com.example.layeredarchitecture.db.DBConnection;
 import com.example.layeredarchitecture.model.CustomerDTO;
@@ -37,7 +38,7 @@ public class ManageCustomersFormController {
     public TextField txtCustomerAddress;
     public TableView<CustomerTM> tblCustomers;
     public JFXButton btnAddNewCustomer;
-
+    CustomerDAO customerDAO = new CustomerDAOImpl();
     public void initialize() {
         tblCustomers.getColumns().get(0).setCellValueFactory(new PropertyValueFactory<>("id"));
         tblCustomers.getColumns().get(1).setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -69,7 +70,7 @@ public class ManageCustomersFormController {
         tblCustomers.getItems().clear();
         /*Get all customers*/
         try {
-            CustomerDAOImpl customerDAO = new CustomerDAOImpl();
+
             ArrayList<CustomerDTO> allCustomer=customerDAO.getAllCustomer();
             for(CustomerDTO c : allCustomer ){
                 tblCustomers.getItems().add(new CustomerTM(c.getId(),c.getName(),c.getAddress()));
@@ -142,14 +143,14 @@ public class ManageCustomersFormController {
                 if (existCustomer(id)) {
                     new Alert(Alert.AlertType.ERROR, id + " already exists").show();
                 }
-                Connection connection = DBConnection.getDbConnection().getConnection();
-                PreparedStatement pstm = connection.prepareStatement("INSERT INTO Customer (id,name, address) VALUES (?,?,?)");
-                pstm.setString(1, id);
-                pstm.setString(2, name);
-                pstm.setString(3, address);
-                pstm.executeUpdate();
 
-                tblCustomers.getItems().add(new CustomerTM(id, name, address));
+
+                CustomerDTO customerDTO = new CustomerDTO(id, name, address);
+                boolean isSaved = customerDAO.saveCustomer(customerDTO);
+
+                if(isSaved){
+                    tblCustomers.getItems().add(new CustomerTM(customerDTO.getId(),customerDTO.getName(),customerDTO.getAddress()));
+                }
             } catch (SQLException e) {
                 new Alert(Alert.AlertType.ERROR, "Failed to save the customer " + e.getMessage()).show();
             } catch (ClassNotFoundException e) {
@@ -163,12 +164,12 @@ public class ManageCustomersFormController {
                 if (!existCustomer(id)) {
                     new Alert(Alert.AlertType.ERROR, "There is no such customer associated with the id " + id).show();
                 }
-                Connection connection = DBConnection.getDbConnection().getConnection();
-                PreparedStatement pstm = connection.prepareStatement("UPDATE Customer SET name=?, address=? WHERE id=?");
-                pstm.setString(1, name);
-                pstm.setString(2, address);
-                pstm.setString(3, id);
-                pstm.executeUpdate();
+
+              //  CustomerDAO customerDAO = new CustomerDAOImpl();
+                CustomerDTO customerDTO = new CustomerDTO(id, name, address);
+                boolean isUpdated = customerDAO.updateCustomer(customerDTO);
+
+
             } catch (SQLException e) {
                 new Alert(Alert.AlertType.ERROR, "Failed to update the customer " + id + e.getMessage()).show();
             } catch (ClassNotFoundException e) {
@@ -186,10 +187,8 @@ public class ManageCustomersFormController {
 
 
     boolean existCustomer(String id) throws SQLException, ClassNotFoundException {
-        Connection connection = DBConnection.getDbConnection().getConnection();
-        PreparedStatement pstm = connection.prepareStatement("SELECT id FROM Customer WHERE id=?");
-        pstm.setString(1, id);
-        return pstm.executeQuery().next();
+        CustomerDAOImpl customerDAO =new CustomerDAOImpl();
+        return customerDAO.existCustomer(id);
     }
 
 
@@ -200,13 +199,9 @@ public class ManageCustomersFormController {
             if (!existCustomer(id)) {
                 new Alert(Alert.AlertType.ERROR, "There is no such customer associated with the id " + id).show();
             }
-            Connection connection = DBConnection.getDbConnection().getConnection();
-            PreparedStatement pstm = connection.prepareStatement("DELETE FROM Customer WHERE id=?");
-            pstm.setString(1, id);
-            pstm.executeUpdate();
+            CustomerDAOImpl dao = new CustomerDAOImpl();
+            dao.deleteCustomer(id);
 
-            tblCustomers.getItems().remove(tblCustomers.getSelectionModel().getSelectedItem());
-            tblCustomers.getSelectionModel().clearSelection();
             initUI();
 
         } catch (SQLException e) {
@@ -218,22 +213,14 @@ public class ManageCustomersFormController {
 
     private String generateNewId() {
         try {
-            Connection connection = DBConnection.getDbConnection().getConnection();
-            ResultSet rst = connection.createStatement().executeQuery("SELECT id FROM Customer ORDER BY id DESC LIMIT 1;");
-            if (rst.next()) {
-                String id = rst.getString("id");
-                int newCustomerId = Integer.parseInt(id.replace("C00-", "")) + 1;
-                return String.format("C00-%03d", newCustomerId);
-            } else {
-                return "C00-001";
-            }
+            CustomerDAOImpl customerDAO = new CustomerDAOImpl();
+            return customerDAO.genarateId();
+
         } catch (SQLException e) {
             new Alert(Alert.AlertType.ERROR, "Failed to generate a new id " + e.getMessage()).show();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-
-
         if (tblCustomers.getItems().isEmpty()) {
             return "C00-001";
         } else {
@@ -241,7 +228,6 @@ public class ManageCustomersFormController {
             int newCustomerId = Integer.parseInt(id.replace("C", "")) + 1;
             return String.format("C00-%03d", newCustomerId);
         }
-
     }
 
     private String getLastCustomerId() {
