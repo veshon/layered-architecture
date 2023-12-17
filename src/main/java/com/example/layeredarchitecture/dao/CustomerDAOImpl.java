@@ -2,6 +2,8 @@ package com.example.layeredarchitecture.dao;
 
 import com.example.layeredarchitecture.db.DBConnection;
 import com.example.layeredarchitecture.model.CustomerDTO;
+import com.example.layeredarchitecture.model.ItemDTO;
+import javafx.scene.control.TableView;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -73,6 +75,17 @@ public class CustomerDAOImpl implements CustomerDAO {
         pstm.setString(1, id);
         return pstm.executeQuery().next();
     }
-
+/*public TableView<Object> cmbCustomerId(TableView<Object> cmbCustomerId) throws SQLException, ClassNotFoundException {
+    Connection connection = DBConnection.getDbConnection().getConnection();
+    Statement stm = connection.createStatement();
+    ResultSet rst = stm.executeQuery("SELECT * FROM Customer");
+    ArrayList<ItemDTO> getAllCustomerId = new ArrayList<>();
+    while (rst.next()) {
+        CustomerDTO customerDTO = new CustomerDTO(rst.getString("id"));
+      //  loadAllCustomerId.add(customerDTO);
+        cmbCustomerId.getItems().add(rst.getString("id"));
+    }
+    return cmbCustomerId;
+}*/
 
 }
